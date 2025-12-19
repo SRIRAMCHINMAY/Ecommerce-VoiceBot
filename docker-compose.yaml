@@ -1,0 +1,26 @@
+services:
+  livekit:
+    image: livekit/livekit-server:latest
+    container_name: livekit-server
+    command: >
+      --config /etc/livekit.yaml
+    ports:
+      - "7880:7880"     # HTTP / WebSocket
+      - "7881:7881"     # TCP TURN (optional)
+      - "7882:7882/udp" # UDP TURN / WebRTC
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+    restart: unless-stopped
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    ports:
+      - "6333:6333"   # REST API
+      - "6334:6334"   # gRPC
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: unless-stopped
+
+volumes:
+  qdrant_data:
