@@ -13,3 +13,6 @@ wheels/
 .env
 test_data/
 test.py
+test_random.py
+setup.py
+
