@@ -146,16 +146,14 @@ class ECommerceTools:
             return "Sorry, I encountered an error while tracking the order."
 
 async def entrypoint(ctx: JobContext):
-    logger.info(f"🚀 Room: {ctx.room.name}")
+    logger.info(f"🚀 Joining room: {ctx.room.name}")
     
-    # Try to connect, but don't wait forever
-    try:
-        await asyncio.wait_for(ctx.connect(), timeout=5.0)
-        logger.info("✅ Connected!")
-    except asyncio.TimeoutError:
-        logger.warning("ctx.connect() timed out, proceeding anyway...")
+    # Connect first - this is required!
+    await ctx.connect()
+    logger.info("✅ Connected to room!")
     
     # Create voice agent with e-commerce context and tools
+    logger.info("⏳ Creating voice agent...")
     agent = voice.Agent(
         vad=silero.VAD.load(),
         stt=openai.STT(),
@@ -165,30 +163,30 @@ async def entrypoint(ctx: JobContext):
             api_key=os.getenv("OPENROUTER_API_KEY"),
         ),
         tts=openai.TTS(),
-        instructions="""You are a helpful e-commerce voice assistant with access to product search and order tracking.
+        instructions="""You are a helpful e-commerce voice assistant. When a user first speaks, greet them warmly and explain you can help with products and orders.
 
 IMPORTANT INSTRUCTIONS:
-- Be conversational, friendly, and concise in your responses
+- Be conversational, friendly, and concise
 - When users ask about products, USE THE search_products TOOL to find them
-- When users ask about orders or provide an order ID, USE THE track_order TOOL
+- When users ask about orders or provide an order ID, USE THE track_order TOOL  
 - Always provide specific product details (name, price, category) when showing products
-- If asked about prices, delivery, or stock, search for the products first
 - Keep responses natural for voice - avoid overly long lists
-- If you can't find something, politely ask for clarification
+- If unclear, politely ask for clarification
 
 Examples:
-- "Show me laptops" → Use search_products tool with "laptops"
-- "Track order ORD12345" → Use track_order tool with "ORD12345"
-- "What's under $50?" → Use search_products tool with "products under $50"
+- "Show me laptops" → Use search_products("laptops")
+- "Track order ORD12345" → Use track_order("ORD12345")
+- "What's under $50?" → Use search_products("products under $50")
 """,
         tools=llm.find_function_tools(ECommerceTools()),
     )
     
+    logger.info("✅ Agent created! Starting session...")
     session = voice.AgentSession()
-    logger.info("Starting e-commerce voice assistant...")
     
-    # capture_run=False makes this block until naturally disconnected
+    # Start session - this blocks until room disconnects
     await session.start(agent, room=ctx.room, capture_run=False)
+    
     logger.info("Session ended")
 
 if __name__ == "__main__":
